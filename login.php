@@ -1,13 +1,20 @@
 <?php
+
+include 'error_handler.php';
+
 session_start();
 
+function checkToken($httpCode) {
+    if ($httpCode == 401) {
+        session_destroy();
+        header("Location: login.php?expired=1");
+        exit();
+    }
+}
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $username = $_POST["username"];
-    $password = $_POST["password"];
-
     $data = json_encode([
-        "username" => $username,
-        "password" => $password
+        "username" => $_POST["username"],
+        "password" => $_POST["password"]
     ]);
 
     $ch = curl_init("http://203.94.72.18/trainee/api/auth/signin");
@@ -16,8 +23,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
     curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-Type: application/json"]);
     $response = curl_exec($ch);
-    curl_close($ch);
-
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    handleApiError($httpCode, $response);
+    checkToken($httpCode);
     $result = json_decode($response, true);
 
     if (isset($result["token"])) {
@@ -34,18 +42,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <!DOCTYPE html>
 <html>
-<head><title>Login</title></head>
-<body>
+<head>
+    <title>Login</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body style="display:flex; justify-content:center; align-items:center; height:100vh;">
 
-<h2>Login</h2>
+<div class="card">
+    <h2 style="margin-top:0">Hall Booking System</h2>
+    <p style="color:#666">Ministry of Finance Login</p>
 
-<?php if (isset($error)) echo "<p style='color:red'>$error</p>"; ?>
+    <?php if (isset($error)) echo "<p class='error'>$error</p>"; ?>
+    <?php if (isset($_GET["expired"])) echo "<p style='color:orange'>Session expired. Please login again.</p>"; ?>
 
-<form method="POST" action="login.php">
-    NIC: <input type="text" name="username"><br><br>
-    Password: <input type="password" name="password"><br><br>
-    <button type="submit">Login</button>
-</form>
+    <form method="POST" action="login.php">
+        <label>NIC Number</label>
+        <input type="text" name="username" required>
+        <label>Password</label>
+        <input type="password" name="password" required>
+        <br>
+        <button class="btn btn-primary" type="submit" style="width:100%; padding:10px;">Login</button>
+    </form>
+</div>
 
 </body>
 </html>

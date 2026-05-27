@@ -1,5 +1,17 @@
 <?php
+
+include 'error_handler.php';
+
 session_start();
+
+function checkToken($httpCode) {
+    if ($httpCode == 401) {
+        session_destroy();
+        header("Location: login.php?expired=1");
+        exit();
+    }
+}
+
 if (!isset($_SESSION["token"])) {
     header("Location: login.php");
     exit();
@@ -24,6 +36,9 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
     "Authorization: Bearer $token"
 ]);
 $response = curl_exec($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+handleApiError($httpCode, $response);
+checkToken($httpCode);
 
 header("Location: bookings.php");
 exit();
